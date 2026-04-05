@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Artjog Opening</title>
+    <style>
+        body { margin: 0; background-color: #000; overflow: hidden; font-family: 'Courier New', monospace; }
+        #ui-layer { position: absolute; top: 20px; left: 20px; color: #fff; pointer-events: none; z-index: 10; }
+        .stat-box { border-left: 2px solid #fff; padding-left: 12px; margin-bottom: 10px; background: rgba(0,0,0,0.6); width: 300px;}
+        .label { font-size: 9px; opacity: 0.5; text-transform: uppercase; letter-spacing: 1px; }
+        .val { font-size: 11px; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+    <div id="ui-layer">
+        <div class="stat-box"><div class="label">Project</div><div class="val">Artjog Opening</div></div>
+        <div class="stat-box"><div class="label">Visual Engine</div><div class="val">RAYCAST_COLLISION_V3</div></div>
+        <div class="stat-box"><div class="label">Current Preset</div><div class="val" id="mode-display">PRESET_1: GEOMETRIC_X_CROSS</div></div>
+    </div>
+
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+            }
+        }
+    </script>
+
+    <script type="module" src="simulation.js"></script>
+
+</body>
+</html>

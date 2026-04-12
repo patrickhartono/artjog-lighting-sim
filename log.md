@@ -122,11 +122,69 @@ Semua beam geometry dipotong paksa di y=0.5.
 
 ---
 
+---
+
+## 2026-04-12
+
+### Session: Fix Bloom, Brightness, dan Screen Integration
+
+---
+
+### 9. Fix: Stage Terang karena UnrealBloomPass Spill
+
+**Masalah:** Stage terlihat terang/putih saat Brightness slider dinaikkan.
+
+**Root Cause:**
+- `MeshBasicMaterial` pada stage sudah immune terhadap AmbientLight.
+- Penyebab sebenarnya: `UnrealBloomPass` dengan `radius=0.4` menyebarkan bloom dari beam (AdditiveBlending, opacity 0.7-0.8) ke seluruh permukaan stage.
+
+**Fix:**
+- `radius: 0.4 → 0.12` — bloom spread ketat, hanya di sekitar beam
+- `threshold: 0.8 → 0.65` — pixel di atas 0.65 bloom (beam di 0.8 bloom, stage di 0.1 tidak)
+
+---
+
+### 10. Fix: Brightness Slider Tidak Ada Efek
+
+**Masalah:** Setelah fix bloom, slider Brightness tidak berpengaruh pada apapun.
+
+**Root Cause:**
+- Slider sebelumnya hanya control `ambientLight.intensity`.
+- Semua object (stage, beam, screen) menggunakan `MeshBasicMaterial` → immune terhadap AmbientLight.
+- Beam opacity hardcoded di 0.7–0.8, tidak ada koneksi ke slider.
+
+**Fix:**
+- `roomBrightness` default: `0.017 → 0.8`
+- Slider sekarang langsung control **beam opacity** di animation loop: `bri = lightParams.roomBrightness`, beam opacity = `bri` (bukan hardcoded 0.8)
+- `ambientLight` decoupled dari slider (fixed low value)
+
+---
+
+### 11. Fix: Screen Shader Over-Bloom
+
+**Masalah:** Setelah threshold bloom diturunkan ke 0.65, screen shader menjadi white blob sangat terang.
+
+**Root Cause:**
+- Screen shader output: `gl_FragColor = fragColor * 0.75` → luminance max ~0.75
+- Threshold 0.65 < 0.75 → seluruh screen pixel trigger bloom → putih semua
+
+**Fix:**
+- Ubah output cap: `fragColor * 0.75 → fragColor * 0.60`
+- Screen luminance max ~0.60 → di bawah threshold 0.65 → tidak bloom
+- Beam di 0.8 tetap bloom, screen stabil
+
+---
+
 ### Status Saat Ini
 - File terorganisir: `Simulation.html` + `simulation.js` ✓
-- 6 totem (3 kiri, 3 kanan) di luar stage ✓
-- 3 heads per totem: bawah (y=1), tengah (y=4), atas (y=8) ✓
+- 5 totem total: 3 kiri (z=-6,0,+6), 2 kanan (z=-3,+3) — audience perspective ✓
+- Head per totem alternating: L1=2, L2=3, L3=2 / R1=3, R2=2 → total 12 heads ✓
 - Beam shape spotlight cone ✓
 - Beam tidak tembus bawah stage (clipping plane) ✓
 - Rotasi semua preset mengarah ke stage ✓
+- Screen: torus matrix-rain shader via WebGLRenderTarget ✓
+- 4 preset: X-Cross (tilt animated), Audience Scanner, Chaos, Horizontal Cross ✓
+- Sequential Chase toggle (apply di semua preset) ✓
+- Brightness slider → control beam opacity langsung ✓
+- Bloom: radius=0.12 (ketat), threshold=0.65 (beam bloom, stage & screen tidak) ✓
 - Project name: Artjog Opening ✓

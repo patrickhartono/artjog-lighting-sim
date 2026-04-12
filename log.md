@@ -175,6 +175,26 @@ Semua beam geometry dipotong paksa di y=0.5.
 
 ---
 
+---
+
+### 12. Ganti Screen Shader: Rotating Box Raymarcher
+
+**Shader sebelumnya:** torus matrix-rain (dari ShaderToy komunitas)
+
+**Shader baru:** karya Patrick Hartono — rotating box dengan:
+- Flickering background (strobe hitam/putih ~5fps via Perlin hash)
+- Ray marching 64 langkah terhadap `boxSDF`
+- Box dirotasi 3 sumbu menggunakan fungsi `rotate()` berbasis quaternion
+- Texturing via `noise3D` (Perlin-based) + simple diffuse lighting
+- Bloom safety: output cap `* 0.60` → max luminance 0.60 < threshold 0.65
+
+**Adaptasi ShaderToy → Three.js:**
+- `mainImage(out vec4, in vec2)` → `void main()`
+- `iTime` → `uTime`, `iResolution` → `uResolution`
+- `fragColor` → `gl_FragColor`
+
+---
+
 ### Status Saat Ini
 - File terorganisir: `Simulation.html` + `simulation.js` ✓
 - 5 totem total: 3 kiri (z=-6,0,+6), 2 kanan (z=-3,+3) — audience perspective ✓
@@ -182,7 +202,7 @@ Semua beam geometry dipotong paksa di y=0.5.
 - Beam shape spotlight cone ✓
 - Beam tidak tembus bawah stage (clipping plane) ✓
 - Rotasi semua preset mengarah ke stage ✓
-- Screen: torus matrix-rain shader via WebGLRenderTarget ✓
+- Screen: rotating box raymarcher (Patrick Hartono) via WebGLRenderTarget ✓
 - 4 preset: X-Cross (tilt animated), Audience Scanner, Chaos, Horizontal Cross ✓
 - Sequential Chase toggle (apply di semua preset) ✓
 - Brightness slider → control beam opacity langsung ✓

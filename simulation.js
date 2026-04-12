@@ -73,92 +73,86 @@ const shaderMat = new THREE.ShaderMaterial({
         uniform float uTime;
         uniform vec2 uResolution;
         uniform vec2 uMouse;
-        varying vec2 vUv;
 
-        const bool TURN_ON_ANTI_ALIASING = true;
-        const float PI = 3.14159265358979323846264;
-        const int MAX_PRIMARY_RAY_STEPS = 80;
+        float taylorInvSqrt(float r) {
+            return 1.79284291400159 - 0.85373472095314 * r;
+        }
 
-        float sdTorus(vec3 p, vec2 t) {
-            vec2 q = vec2(length(p.xz) - t.x, p.y);
-            return length(q) - t.y;
+        float noise(vec2 p) {
+            vec2 Pi = floor(p);
+            vec2 Pf = p - Pi;
+            Pi = mod(Pi, 256.0);
+            vec2 grad3[12];
+            grad3[0]  = vec2(1,1);  grad3[1]  = vec2(-1,1);  grad3[2]  = vec2(1,-1);  grad3[3]  = vec2(-1,-1);
+            grad3[4]  = vec2(1,0);  grad3[5]  = vec2(-1,0);  grad3[6]  = vec2(1,0);   grad3[7]  = vec2(-1,0);
+            grad3[8]  = vec2(0,1);  grad3[9]  = vec2(0,-1);  grad3[10] = vec2(0,1);   grad3[11] = vec2(0,-1);
+            float n00 = dot(grad3[int(mod(Pi.x + mod(Pi.y, 256.0), 12.0))],           Pf);
+            float n01 = dot(grad3[int(mod(Pi.x + mod(Pi.y + 1.0, 256.0), 12.0))],     Pf - vec2(0,1));
+            float n10 = dot(grad3[int(mod(Pi.x + 1.0 + mod(Pi.y, 256.0), 12.0))],     Pf - vec2(1,0));
+            float n11 = dot(grad3[int(mod(Pi.x + 1.0 + mod(Pi.y + 1.0, 256.0), 12.0))], Pf - vec2(1,1));
+            vec2 fade = vec2(Pf.x*Pf.x*Pf.x*(Pf.x*(Pf.x*6.0-15.0)+10.0),
+                             Pf.y*Pf.y*Pf.y*(Pf.y*(Pf.y*6.0-15.0)+10.0));
+            return mix(mix(n00, n10, fade.x), mix(n01, n11, fade.x), fade.y);
         }
-        float distanceField(vec3 p) {
-            return -sdTorus(p.yxz, vec2(5.0, 1.0));
+
+        float noise3D(vec3 p) {
+            return fract(sin(dot(p, vec3(12.9898, 78.233, 45.164))) * 43758.5453);
         }
-        vec3 castRay(vec3 pos, vec3 dir) {
-            for (int i = 0; i < MAX_PRIMARY_RAY_STEPS; i++) {
-                float dist = distanceField(pos);
-                pos += dist * dir;
-            }
-            return pos;
+
+        vec3 rotate(vec3 p, vec3 axis, float angle) {
+            float cosA = cos(angle);
+            float sinA = sin(angle);
+            return cosA * p + sinA * cross(axis, p) + (1.0 - cosA) * dot(axis, p) * axis;
         }
-        float random(in float x) { return fract(sin(x) * 1e4); }
-        float random(in vec2 st) { return fract(sin(dot(st.xy, vec2(12.9898, 78.233))) * 43758.5453123); }
-        float pattern(vec2 st, vec2 v, float t) {
-            vec2 p = floor(st + v);
-            return step(t, random(25.0 + p * 0.000004) + random(p.x) * 0.75);
+
+        float boxSDF(vec3 p, vec3 b) {
+            vec3 d = abs(p) - b;
+            return min(max(d.x, max(d.y, d.z)), 0.0) + length(max(d, 0.0));
         }
 
         void main() {
             vec2 fragCoord = gl_FragCoord.xy;
             vec4 fragColor = vec4(0.0);
 
-            if (TURN_ON_ANTI_ALIASING) {
-                for (int xi = 0; xi < 2; xi++) {
-                    for (int yi = 0; yi < 2; yi++) {
-                        vec2 aaOffset = vec2(xi == 0 ? -0.25 : 0.25, yi == 0 ? -0.25 : 0.25);
-                        vec2 screenPos = ((fragCoord + aaOffset) / uResolution) * 2.0 - 1.0;
-                        vec3 cameraPos = vec3(0.0, 4.2, -3.8);
-                        vec3 cameraDir = vec3(0.0, 0.22, 1.3);
-                        vec3 planeU = vec3(1.0, 0.0, 0.0) * 0.8;
-                        vec3 planeV = vec3(0.0, uResolution.y / uResolution.x, 0.0);
-                        vec3 rayDir = normalize(cameraDir + screenPos.x * planeU + screenPos.y * planeV);
-                        vec3 rayPos = castRay(cameraPos, rayDir);
-                        float majorAngle = atan(rayPos.z, rayPos.y);
-                        float minorAngle = atan(rayPos.x, length(rayPos.yz) - 5.0);
-                        vec2 st = vec2(majorAngle / PI / 2.0, minorAngle / PI);
-                        vec2 grid = vec2(1000.0, 50.0);
-                        st *= grid;
-                        vec2 ipos = floor(st);
-                        vec2 fpos = fract(st);
-                        vec2 vel = vec2(uTime * 0.09 * max(grid.x, grid.y));
-                        vel *= vec2(1.0, 0.0) * (0.4 + 2.0 * pow(random(1.0 + ipos.y), 2.0));
-                        vec2 offset = 0.0 * vec2(0.2, 0.25);
-                        vec3 color = vec3(0.0);
-                        float replaceMouse = 0.75 + 0.45 * sin(0.6 * uTime + 0.015 * st.x);
-                        color.r = pattern(st + offset, vel, replaceMouse);
-                        color.g = pattern(st, vel, replaceMouse);
-                        color.b = pattern(st - offset, vel, replaceMouse);
-                        color *= step(0.2, fpos.y);
-                        fragColor += 0.25 * vec4(color, 1.0);
-                    }
+            float timeFloor = floor(uTime * 10.0);
+            float flicker = fract(sin(dot(vec2(timeFloor, timeFloor), vec2(12.9898, 79.233))) * 43758.5453);
+            flicker = step(0.5, flicker);
+
+            vec3 bgColor = vec3(flicker);
+            fragColor = vec4(bgColor, 1.0);
+
+            vec2 uv = (fragCoord.xy - uResolution.xy * 0.5) / uResolution.y;
+
+            vec3 ro = vec3(0.0, 0.0, -5.0);
+            vec3 rd = normalize(vec3(uv, 1.0));
+            vec3 boxSize = vec3(1.0, 1.0, 1.0);
+            vec3 lightPos = vec3(2.0, 2.0, -2.0);
+
+            float t = 0.0;
+            bool hit = false;
+
+            for (int i = 0; i < 64; i++) {
+                vec3 p = ro + t * rd;
+                p = rotate(p, vec3(1.0, 0.0, 0.0), sin(uTime));
+                p = rotate(p, vec3(0.0, 1.0, 0.0), cos(uTime));
+                p = rotate(p, vec3(0.0, 0.0, 1.0), sin(uTime) * cos(uTime));
+                float d = boxSDF(p, boxSize);
+                if (d < 0.01) {
+                    float n = noise3D(p * 10.0);
+                    n = n * 0.5 + 0.5;
+                    vec3 lightDir = normalize(lightPos - p);
+                    float diff = max(0.0, dot(vec3(0.0, 1.0, 0.0), lightDir));
+                    vec3 col = vec3(n) * diff;
+                    fragColor = vec4(col, 1.0);
+                    hit = true;
+                    break;
                 }
-            } else {
-                vec2 screenPos = (fragCoord / uResolution) * 2.0 - 1.0;
-                vec3 cameraPos = vec3(0.0, 4.2, -3.8);
-                vec3 cameraDir = vec3(0.0, 0.22, 1.3);
-                vec3 planeU = vec3(1.0, 0.0, 0.0) * 0.8;
-                vec3 planeV = vec3(0.0, uResolution.y / uResolution.x, 0.0);
-                vec3 rayDir = normalize(cameraDir + screenPos.x * planeU + screenPos.y * planeV);
-                vec3 rayPos = castRay(cameraPos, rayDir);
-                float majorAngle = atan(rayPos.z, rayPos.y);
-                float minorAngle = atan(rayPos.x, length(rayPos.yz) - 5.0);
-                vec2 st = vec2(majorAngle / PI / 2.0, minorAngle / PI);
-                vec2 grid = vec2(1000.0, 50.0);
-                st *= grid;
-                vec2 ipos = floor(st);
-                vec2 fpos = fract(st);
-                vec2 vel = vec2(uTime * 0.09 * max(grid.x, grid.y));
-                vel *= vec2(1.0, 0.0) * (0.4 + 2.0 * pow(random(1.0 + ipos.y), 2.0));
-                vec2 offset = 0.0 * vec2(0.2, 0.25);
-                vec3 color = vec3(0.0);
-                float replaceMouse = 0.75 + 0.45 * sin(0.6 * uTime + 0.015 * st.x);
-                color.r = pattern(st + offset, vel, replaceMouse);
-                color.g = pattern(st, vel, replaceMouse);
-                color.b = pattern(st - offset, vel, replaceMouse);
-                color *= step(0.2, fpos.y);
-                fragColor = vec4(color, 1.0);
+                t += d;
+                if (t > 10.0) break;
+            }
+
+            if (!hit) {
+                fragColor = vec4(bgColor, 1.0);
             }
 
             gl_FragColor = fragColor * 0.60;

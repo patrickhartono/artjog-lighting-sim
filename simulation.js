@@ -8,7 +8,7 @@ import { GUI } from 'three/addons/libs/lil-gui.module.min.js';
 // --- SCENE SETUP ---
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(40, window.innerWidth / window.innerHeight, 0.1, 1000);
-camera.position.set(0, 10, 35);
+camera.position.set(0, 8, 22);
 
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
@@ -24,28 +24,34 @@ composer.addPass(new RenderPass(scene, camera));
 composer.addPass(new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 1.5, 0.12, 0.65));
 
 const controls = new OrbitControls(camera, renderer.domElement);
-controls.target.set(0, 3, 0);
+controls.target.set(0, 2, 0);
 controls.update();
 const raycaster = new THREE.Raycaster();
 
 // --- STAGE & ENV ---
-const stage = new THREE.Mesh(new THREE.BoxGeometry(30, 0.5, 15), new THREE.MeshBasicMaterial({ color: 0x1a1a1a }));
+const stage = new THREE.Mesh(new THREE.BoxGeometry(12, 0.5, 8), new THREE.MeshBasicMaterial({ color: 0x1a1a1a }));
 stage.position.y = 0.25; scene.add(stage);
+
+// Floor grid reference (like Blender) — 1 cell = 1M × 1M
+const gridHelper = new THREE.GridHelper(30, 30, 0x333333, 0x222222);
+gridHelper.position.y = 0.01;
+scene.add(gridHelper);
 
 const ground = new THREE.Mesh(new THREE.PlaneGeometry(200, 200), new THREE.MeshBasicMaterial({ visible: false }));
 ground.rotation.x = -Math.PI / 2;
 ground.position.y = 0.5; // same level as stage top — prevents beams going below stage
 scene.add(ground);
 
-// Choir Clusters (Warna Gelap Siluet)
+// Audience Silhouettes — random height 1.5–1.7M
 function addChoir(x, z, count) {
     for (let i = 0; i < count; i++) {
-        const c = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.2, 1.8, 6), new THREE.MeshStandardMaterial({ color: 0x050505 }));
-        c.position.set(x + (Math.random() - 0.5) * 6, 1.2, z + (Math.random() - 0.5) * 4);
+        const h = 1.5 + Math.random() * 0.2; // random 1.5–1.7M
+        const c = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.15, h, 6), new THREE.MeshStandardMaterial({ color: 0x050505 }));
+        c.position.set(x + (Math.random() - 0.5) * 4, h / 2 + 0.5, z + (Math.random() - 0.5) * 3);
         scene.add(c);
     }
 }
-addChoir(-8, 0, 15); addChoir(8, 0, 15);
+addChoir(-3, 0, 15); addChoir(3, 0, 15);
 
 // Screen (Art Deco Shader via RenderTarget)
 const SHADER_W = 1280, SHADER_H = 720;
@@ -163,10 +169,10 @@ const shaderMat = new THREE.ShaderMaterial({
 shaderScene.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), shaderMat));
 
 const screen = new THREE.Mesh(
-    new THREE.PlaneGeometry(22, 11),
+    new THREE.PlaneGeometry(10, 5),
     new THREE.MeshBasicMaterial({ map: shaderTarget.texture })
 );
-screen.position.set(0, 6, -8);
+screen.position.set(0, 4, -4);
 scene.add(screen);
 
 // --- LIGHTING ENGINE (4 TOTEM, 3 HEADS EACH) ---
@@ -178,13 +184,13 @@ const CHASE_INTERVAL = 0.12; // detik per step
 const ambientLight = new THREE.AmbientLight(0xffffff, lightParams.roomBrightness);
 scene.add(ambientLight);
 
-const TOTEM_HEIGHT = 8;
+const TOTEM_HEIGHT = 6;
 const lightPositions = [
-    { x: -17, z: -6, yPositions: [2, 6] },    // Left 1  — 2 heads
-    { x: -17, z:  0, yPositions: [1, 4, 8] }, // Left 2  — 3 heads
-    { x: -17, z:  6, yPositions: [2, 6] },    // Left 3  — 2 heads
-    { x:  17, z: -3, yPositions: [1, 4, 8] }, // Right 1 — 3 heads
-    { x:  17, z:  3, yPositions: [2, 6] },    // Right 2 — 2 heads
+    { x: -8, z: -3, yPositions: [2, 5] },    // Left 1  — 2 heads
+    { x: -8, z:  0, yPositions: [1, 3, 5] }, // Left 2  — 3 heads
+    { x: -8, z:  3, yPositions: [2, 5] },    // Left 3  — 2 heads
+    { x:  8, z: -2, yPositions: [1, 3, 5] }, // Right 1 — 3 heads
+    { x:  8, z:  2, yPositions: [2, 5] },    // Right 2 — 2 heads
 ];
 
 function createTotem(config) {

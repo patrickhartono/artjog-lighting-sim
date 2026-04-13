@@ -208,3 +208,29 @@ Semua beam geometry dipotong paksa di y=0.5.
 - Brightness slider → control beam opacity langsung ✓
 - Bloom: radius=0.12 (ketat), threshold=0.65 (beam bloom, stage & screen tidak) ✓
 - Project name: Artjog Opening ✓
+
+---
+
+## 2026-04-13
+
+### Session: Real-World Scale + Floor Grid + Choir Fix
+
+---
+
+### 13. Rescale ke Dimensi Nyata (1 unit = 1 meter)
+
+**Stage:** `BoxGeometry(30, 0.5, 15)` → `BoxGeometry(12, 0.5, 8)` — sesuai dimensi asli 12M × 8M.
+
+**Floor Grid:** Tambah `THREE.GridHelper(30, 30)` di y=0.01 sebagai referensi skala (tiap cell = 1M × 1M), seperti viewport Blender.
+
+**Totem positions:** Disesuaikan ke skala baru — x=±8 (luar stage ±6), z proporsional (±3), `TOTEM_HEIGHT = 6`.
+
+**Audience silhouettes:** Tinggi random 1.5–1.7M (sebelumnya fixed 1.8). Dipindah ke x=±3 dalam stage.
+
+**Camera:** `position.set(0, 8, 22)`, target `(0, 2, 0)`.
+
+---
+
+### ⚠ TODO: Screen Size Belum Tepat
+
+Screen saat ini `PlaneGeometry(10, 5)` di `position(0, 4, -4)` — ukuran ini placeholder, belum disesuaikan dengan dimensi nyata backdrop/screen di venue Artjog. Perlu update setelah ada data ukuran screen asli.

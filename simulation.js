@@ -235,10 +235,25 @@ gui.add(lightParams, 'roomBrightness', 0, 1.0).name('Brightness');
 gui.add(lightParams, 'animSpeed', 0.5, 10).name('Anim Speed');
 gui.add(lightParams, 'seqChase').name('Sequential Chase');
 
+// --- FULLSCREEN ---
+const btnFS = document.getElementById('btn-fullscreen');
+btnFS.addEventListener('click', () => {
+    if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen();
+    } else {
+        document.exitFullscreen();
+    }
+});
+document.addEventListener('fullscreenchange', () => {
+    btnFS.textContent = document.fullscreenElement ? '[ EXIT FULLSCREEN ]' : '[ FULLSCREEN ]';
+});
+window.addEventListener('keydown', (e) => {
+    if (e.key === 'f' || e.key === 'F') btnFS.click();
+});
+
 // --- ANIMATION ---
 const startTime = Date.now();
 function animate() {
-    requestAnimationFrame(animate);
     const t = (Date.now() - startTime) * 0.001;
     const speed = lightParams.animSpeed;
     shaderUniforms.uTime.value = t;
@@ -307,7 +322,26 @@ function animate() {
 
     controls.update();
 }
-animate();
+
+// Prevent Chrome from throttling rAF when window loses focus (e.g. OBS Window Capture)
+let rafId = null;
+let intervalId = null;
+function startRaf() {
+    if (rafId) return;
+    rafId = requestAnimationFrame(function loop() { animate(); rafId = requestAnimationFrame(loop); });
+}
+function stopRaf() {
+    if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
+}
+window.addEventListener('blur', () => {
+    stopRaf();
+    if (!intervalId) intervalId = setInterval(animate, 1000 / 60);
+});
+window.addEventListener('focus', () => {
+    clearInterval(intervalId); intervalId = null;
+    startRaf();
+});
+startRaf();
 
 window.addEventListener('resize', () => {
     camera.aspect = window.innerWidth / window.innerHeight; camera.updateProjectionMatrix();

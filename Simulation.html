@@ -12,6 +12,8 @@
         #info-layer { position: absolute; bottom: 20px; right: 20px; color: #fff; pointer-events: none; z-index: 10; text-align: right; }
         #info-layer .stat-box { border-left: none; border-right: 2px solid #fff; padding-left: 0; padding-right: 12px; width: auto; margin-bottom: 6px; }
         .val-warn { font-size: 11px; font-weight: bold; opacity: 0.5; }
+        #btn-fullscreen { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); color: #fff; background: rgba(0,0,0,0.6); border: 1px solid rgba(255,255,255,0.3); font-family: 'Courier New', monospace; font-size: 9px; letter-spacing: 2px; padding: 6px 14px; cursor: pointer; z-index: 10; text-transform: uppercase; pointer-events: all; }
+        #btn-fullscreen:hover { border-color: #fff; }
     </style>
 </head>
 <body>
@@ -21,6 +23,8 @@
         <div class="stat-box"><div class="label">Visual Engine</div><div class="val">RAYCAST_COLLISION_V3</div></div>
         <div class="stat-box"><div class="label">Current Preset</div><div class="val" id="mode-display">PRESET_1: GEOMETRIC_X_CROSS</div></div>
     </div>
+
+    <button id="btn-fullscreen">[ FULLSCREEN ]</button>
 
     <div id="info-layer">
         <div class="stat-box"><div class="label">Screen</div><div class="val-warn">10M × 5M (placeholder)</div></div>

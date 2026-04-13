@@ -263,3 +263,28 @@ Screen saat ini `PlaneGeometry(10, 5)` — ukuran ini placeholder, belum disesua
 - Screen: 10M × 5M ⚠ (placeholder, ditandai redup)
 
 **Implementasi:** Pure HTML di `Simulation.html` — CSS `#info-layer` (bottom-right, text-align right, border-right flip dari aesthetic kiri), tidak perlu JS karena nilai statis.
+
+---
+
+### 16. Tambah: Fullscreen Button (Fullscreen API)
+
+**Fitur:** Tombol `[ FULLSCREEN ]` di tengah bawah layar, toggle fullscreen OS penuh (address bar hilang).
+
+**Keyboard shortcut:** Tekan `F` untuk toggle.
+
+**Implementasi:**
+- `Simulation.html`: CSS `#btn-fullscreen` (posisi center-bottom, monospace style), tambah `<button id="btn-fullscreen">`
+- `simulation.js`: `document.documentElement.requestFullscreen()` / `exitFullscreen()`, handle `fullscreenchange` untuk update label tombol
+
+---
+
+### ⚠ Unresolved: OBS Window Capture Throttling
+
+**Masalah:** Saat OBS melakukan Window Capture ke Chrome, simulasi berhenti render karena Chrome throttle `requestAnimationFrame` ketika window kehilangan fokus.
+
+**Yang sudah dicoba:**
+- Chrome flag: `--disable-renderer-backgrounding --disable-background-timer-throttling` — tidak berhasil
+- Code fix `visibilitychange` → switch ke `setInterval` — tidak trigger (visibilitychange hanya untuk tab switch, bukan window focus)
+- Code fix `window.blur/focus` → switch ke `setInterval` — tidak berhasil
+
+**Workaround yang belum dicoba:** Gunakan OBS **Browser Source** (embedded Chromium) dengan URL `http://localhost:8080/Simulation.html` — tidak kena throttle karena render di internal OBS.

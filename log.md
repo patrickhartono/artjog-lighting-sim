@@ -233,4 +233,33 @@ Semua beam geometry dipotong paksa di y=0.5.
 
 ### ⚠ TODO: Screen Size Belum Tepat
 
-Screen saat ini `PlaneGeometry(10, 5)` di `position(0, 4, -4)` — ukuran ini placeholder, belum disesuaikan dengan dimensi nyata backdrop/screen di venue Artjog. Perlu update setelah ada data ukuran screen asli.
+Screen saat ini `PlaneGeometry(10, 5)` — ukuran ini placeholder, belum disesuaikan dengan dimensi nyata backdrop/screen di venue Artjog. Perlu update setelah ada data ukuran screen asli.
+
+---
+
+### 14. Fix: Screen Position — Menyentuh Lantai Panggung
+
+**Masalah:** Screen floating — bottom edge di Y=1.5, ada gap 1M dari stage surface.
+
+**Root cause:** `screen.position.set(0, 4, -4)` — center di Y=4, tapi screen tinggi 5 unit, sehingga bottom edge di Y=4−2.5=1.5.
+
+**Fix:**
+- Dari foto referensi venue (panggung.jpeg, Jeje-4.jpg): backdrop berdiri langsung dari lantai panggung.
+- Hitung ulang: `bottom = 0.5 (stage surface)`, `height = 5`, `center_y = 0.5 + 2.5 = 3.0`
+- `screen.position.set(0, 4, -4)` → `screen.position.set(0, 3.0, -4)` (`simulation.js` line 175)
+
+---
+
+### 15. Tambah: Info Panel Bottom-Right
+
+**Fitur:** Panel overlay di pojok kanan bawah berisi referensi dimensi nyata dan setup rig.
+
+**Konten:**
+- Stage: 12M × 8M
+- Scale: 1 unit = 1 meter
+- Grid: 1 cell = 1M × 1M
+- Moving Heads: 12 total — 5 totems (L:3 / R:2)
+- Totem Height: 6M
+- Screen: 10M × 5M ⚠ (placeholder, ditandai redup)
+
+**Implementasi:** Pure HTML di `Simulation.html` — CSS `#info-layer` (bottom-right, text-align right, border-right flip dari aesthetic kiri), tidak perlu JS karena nilai statis.

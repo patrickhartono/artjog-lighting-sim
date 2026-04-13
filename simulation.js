@@ -172,7 +172,7 @@ const screen = new THREE.Mesh(
     new THREE.PlaneGeometry(10, 5),
     new THREE.MeshBasicMaterial({ map: shaderTarget.texture })
 );
-screen.position.set(0, 4, -4);
+screen.position.set(0, 3.0, -4);
 scene.add(screen);
 
 // --- LIGHTING ENGINE (4 TOTEM, 3 HEADS EACH) ---

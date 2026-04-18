@@ -95,6 +95,30 @@ simulation.js       Three.js scene, lighting engine, shader, animation loop
 
 ---
 
+## Roadmap / In Progress
+
+### TouchDesigner WebSocket Control *(not yet implemented)*
+
+Plan: expose all lighting parameters via a local WebSocket server so TouchDesigner can drive the simulation in real time.
+
+Parameters to control:
+- `preset` — switch between PRESET 1–4
+- `roomBrightness` — beam opacity (0–1)
+- `animSpeed` — animation rate multiplier
+- `beamWidth` — beam cone width
+- `seqChase` — toggle sequential chase mode
+
+**Proposed message format (JSON over WebSocket):**
+
+```json
+{ "preset": "PRESET 1", "brightness": 0.8, "animSpeed": 2.0, "beamWidth": 0.4, "seqChase": false }
+```
+
+TouchDesigner side: use a WebSocket DAT pointed at `ws://localhost:8081` to send updates on parameter change.
+Browser side: a `WebSocket` listener updates `lightParams` on each incoming message.
+
+---
+
 ## Known Issues
 
 **OBS Window Capture throttling**

@@ -21,7 +21,8 @@ const stageClipPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -0.5);
 
 const composer = new EffectComposer(renderer);
 composer.addPass(new RenderPass(scene, camera));
-composer.addPass(new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 1.5, 0.12, 0.65));
+const bloomPass = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 1.5, 0.12, 0.65);
+composer.addPass(bloomPass);
 
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.target.set(0, 2, 0);
@@ -177,10 +178,21 @@ scene.add(screen);
 
 // --- LIGHTING ENGINE (4 TOTEM, 3 HEADS EACH) ---
 const lights = [];
-const lightParams = { preset: 'PRESET 3', roomBrightness: 0.8, animSpeed: 0.5, beamWidth: 0.4, seqChase: false };
+const lightParams = { preset: 'PRESET 3', roomBrightness: 0.8, animSpeed: 0.5, beamWidth: 0.4, seqChase: false, bloomStrength: 1.5, chaseInterval: 0.12, beamColor: '#ffffff' };
 let chaseIndex = 0;
 let lastChaseTime = 0;
-const CHASE_INTERVAL = 0.12; // detik per step
+
+// WebSocket client — connects to TouchDesigner WebSocket Server DAT (port 9980)
+// Sim runs standalone if TD is not connected; all params remain GUI-controllable.
+const ws = new WebSocket('ws://localhost:9980');
+ws.onmessage = (event) => {
+    try {
+        Object.assign(lightParams, JSON.parse(event.data));
+        gui.controllers.forEach(c => c.updateDisplay());
+    } catch (e) { console.warn('[WS] Bad message:', e); }
+};
+ws.onopen = () => ws.send(JSON.stringify({ type: 'status', connected: true, preset: lightParams.preset }));
+ws.onerror = () => console.warn('[WS] TouchDesigner not connected — running standalone');
 const ambientLight = new THREE.AmbientLight(0xffffff, lightParams.roomBrightness);
 scene.add(ambientLight);
 
@@ -253,10 +265,16 @@ window.addEventListener('keydown', (e) => {
 
 // --- ANIMATION ---
 const startTime = Date.now();
+let _lastBeamColor = lightParams.beamColor;
 function animate() {
     const t = (Date.now() - startTime) * 0.001;
     const speed = lightParams.animSpeed;
     shaderUniforms.uTime.value = t;
+    bloomPass.strength = lightParams.bloomStrength;
+    if (lightParams.beamColor !== _lastBeamColor) {
+        lights.forEach(l => l.beam.material.color.set(lightParams.beamColor));
+        _lastBeamColor = lightParams.beamColor;
+    }
     renderer.setRenderTarget(shaderTarget);
     renderer.render(shaderScene, shaderCam);
     renderer.setRenderTarget(null);
@@ -297,7 +315,7 @@ function animate() {
 
         // --- SEQUENTIAL CHASE OVERLAY ---
         if (lightParams.seqChase) {
-            if (t - lastChaseTime > CHASE_INTERVAL / speed) {
+            if (t - lastChaseTime > lightParams.chaseInterval / speed) {
                 chaseIndex = (chaseIndex + 1) % lights.length;
                 lastChaseTime = t;
             }

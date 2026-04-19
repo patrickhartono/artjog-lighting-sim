@@ -97,25 +97,50 @@ simulation.js       Three.js scene, lighting engine, shader, animation loop
 
 ## Roadmap / In Progress
 
-### TouchDesigner WebSocket Control *(not yet implemented)*
+### TouchDesigner WebSocket Control *(implemented)*
 
-Plan: expose all lighting parameters via a local WebSocket server so TouchDesigner can drive the simulation in real time.
+TouchDesigner drives the simulation in real time via WebSocket. Architecture: **TD = WebSocket Server (port 9980), browser = client.**
 
-Parameters to control:
-- `preset` — switch between PRESET 1–4
-- `roomBrightness` — beam opacity (0–1)
-- `animSpeed` — animation rate multiplier
-- `beamWidth` — beam cone width
-- `seqChase` — toggle sequential chase mode
+The browser connects to TD on load. If TD is not running, the sim works standalone — all parameters remain GUI-controllable.
 
-**Proposed message format (JSON over WebSocket):**
+**Parameters (JSON keys):**
 
+| Key | Type | Range | Effect |
+|-----|------|-------|--------|
+| `preset` | string | `"PRESET 1"–"PRESET 4"` | Switch animation pattern |
+| `brightness` | float | 0.0–1.0 | Beam opacity + ambient intensity |
+| `animSpeed` | float | 0.5–10.0 | Animation rate multiplier |
+| `beamWidth` | float | 0.1–0.8 | Beam cone width |
+| `seqChase` | bool | true/false | Sequential chase strobe overlay |
+| `bloomStrength` | float | 0.0–3.0 | Post-processing bloom intensity |
+| `chaseInterval` | float | 0.05–1.0 | Seconds per chase step |
+| `beamColor` | string | `"#rrggbb"` | Beam color (hex) |
+
+**Message format (TD → Browser):**
 ```json
-{ "preset": "PRESET 1", "brightness": 0.8, "animSpeed": 2.0, "beamWidth": 0.4, "seqChase": false }
+{ "preset": "PRESET 2", "brightness": 0.8, "animSpeed": 2.0, "beamWidth": 0.4, "seqChase": false, "bloomStrength": 1.5, "chaseInterval": 0.12, "beamColor": "#ffffff" }
 ```
+Partial updates are supported — only send the keys that changed.
 
-TouchDesigner side: use a WebSocket DAT pointed at `ws://localhost:8081` to send updates on parameter change.
-Browser side: a `WebSocket` listener updates `lightParams` on each incoming message.
+**TouchDesigner setup:**
+1. Add a **WebSocket Server DAT** — set Network Mode: Server, Port: 9980
+2. Add an **Execute DAT** (or Script DAT) to serialize parameters to JSON and call:
+   ```python
+   import json
+   op('websocket_server').send(json.dumps({
+       "preset": op('preset_select').par.value0.val,
+       "brightness": float(op('brightness_slider')[0]),
+       "animSpeed": float(op('speed_slider')[0]),
+       "beamWidth": float(op('beamwidth_slider')[0]),
+       "seqChase": bool(op('seqchase_toggle')[0]),
+       "bloomStrength": float(op('bloom_slider')[0]),
+       "chaseInterval": float(op('chase_interval')[0]),
+       "beamColor": str(op('color_picker').par.value0.val)
+   }))
+   ```
+3. Browser connects automatically to `ws://localhost:9980` on page load.
+
+**If TD and browser are on different machines (LAN):** change `ws://localhost:9980` in `simulation.js` line 187 to the TD machine's IP address.
 
 ---
 

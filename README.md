@@ -63,8 +63,13 @@ http://localhost:8080/Simulation.html
 ## File Structure
 
 ```
-Simulation.html     HTML shell, CSS overlay styles, importmap
-simulation.js       Three.js scene, lighting engine, shader, animation loop
+index.html                  HTML shell, CSS overlay styles, importmap
+simulation.js               Three.js scene, lighting engine, shader, animation loop
+Lighting-Sim.toe            TouchDesigner project (WebSocket server + control surface)
+scripts/
+  ws_server_callbacks.py    TD WebSocket event handlers (open/close/receive)
+  chop_to_websocket.py      TD CHOP → JSON → WebSocket broadcast
+  http_server_lifecycle.py  TD HTTP server subprocess management (onStart/onExit)
 ```
 
 ---
@@ -122,23 +127,20 @@ The browser connects to TD on load. If TD is not running, the sim works standalo
 ```
 Partial updates are supported — only send the keys that changed.
 
-**TouchDesigner setup:**
-1. Add a **WebSocket Server DAT** — set Network Mode: Server, Port: 9980
-2. Add an **Execute DAT** (or Script DAT) to serialize parameters to JSON and call:
-   ```python
-   import json
-   op('websocket_server').send(json.dumps({
-       "preset": op('preset_select').par.value0.val,
-       "brightness": float(op('brightness_slider')[0]),
-       "animSpeed": float(op('speed_slider')[0]),
-       "beamWidth": float(op('beamwidth_slider')[0]),
-       "seqChase": bool(op('seqchase_toggle')[0]),
-       "bloomStrength": float(op('bloom_slider')[0]),
-       "chaseInterval": float(op('chase_interval')[0]),
-       "beamColor": str(op('color_picker').par.value0.val)
-   }))
-   ```
-3. Browser connects automatically to `ws://localhost:9980` on page load.
+**TouchDesigner setup (via `Lighting-Sim.toe`):**
+
+Open `Lighting-Sim.toe` — the full TD project is pre-built with:
+
+| Node | Type | Role |
+|------|------|------|
+| `ws_server` | webserverDAT | WebSocket server on port 9980 |
+| `artjog_params` | baseCOMP | Control surface — 8 custom parameters |
+| `parm1` → `lag1` | parameterCHOP → lagCHOP | Reads params, 0.05s debounce |
+| `ctrl_exec` | chopexecuteDAT | onValueChange → JSON → WS broadcast |
+| `start_exec` | executeDAT | Auto-starts HTTP server on project open |
+| `sim_browser` | webrenderTOP | Renders sim inside TD at http://localhost:8080 |
+
+Operator adjusts parameters directly in `artjog_params` custom parameter panel. Changes broadcast to browser automatically.
 
 **If TD and browser are on different machines (LAN):** change `ws://localhost:9980` in `simulation.js` line 187 to the TD machine's IP address.
 

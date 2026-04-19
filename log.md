@@ -288,3 +288,83 @@ Screen saat ini `PlaneGeometry(10, 5)` — ukuran ini placeholder, belum disesua
 - Code fix `window.blur/focus` → switch ke `setInterval` — tidak berhasil
 
 **Workaround yang belum dicoba:** Gunakan OBS **Browser Source** (embedded Chromium) dengan URL `http://localhost:8080/Simulation.html` — tidak kena throttle karena render di internal OBS.
+
+---
+
+## 2026-04-19
+
+### Session: TouchDesigner WebSocket Control + TD Project Setup
+
+---
+
+### 17. Implementasi WebSocket Client di simulation.js
+
+**Tujuan:** Agar TouchDesigner bisa mengontrol semua parameter lighting secara real-time.
+
+**Arsitektur:** TD sebagai WebSocket Server (port 9980), browser sebagai client. Sim tetap jalan standalone jika TD tidak buka.
+
+**Perubahan di `simulation.js`:**
+- `bloomPass` diextract sebagai named variable agar bisa diupdate runtime
+- `lightParams` diperluas dengan 3 parameter baru: `bloomStrength`, `chaseInterval`, `beamColor`
+- `CHASE_INTERVAL` const dihapus → dipindah ke `lightParams.chaseInterval`
+- WebSocket client ditambah (line 185–195): `Object.assign(lightParams, JSON.parse(event.data))` + sync GUI
+- `animate()` sync `bloomPass.strength` dan `beamColor` per frame
+
+**8 parameter yang bisa dikontrol via WebSocket:**
+
+| JSON Key | Range | Default |
+|---|---|---|
+| `preset` | "PRESET 1"–"PRESET 4" | "PRESET 3" |
+| `roomBrightness` | 0–1 | 0.8 |
+| `animSpeed` | 0.5–10 | 0.5 |
+| `beamWidth` | 0.1–0.8 | 0.4 |
+| `seqChase` | true/false | false |
+| `bloomStrength` | 0–3 | 1.5 |
+| `chaseInterval` | 0.05–1.0 | 0.12 |
+| `beamColor` | "#rrggbb" | "#ffffff" |
+
+---
+
+### 18. TouchDesigner Project: Lighting-Sim.toe
+
+**TD project dibangun** dengan node network di `/project1/` via MCP Python scripting:
+
+| Node | Type | Fungsi |
+|---|---|---|
+| `ws_server` | webserverDAT (port 9980) | WebSocket server menerima koneksi browser |
+| `ws_callbacks` | textDAT | Event handler WS (open/close/receive), store clients di `op('/project1')` |
+| `artjog_params` | baseCOMP | Control surface — 8 custom parameter (Menu, Float, Toggle, RGB) |
+| `parm1` | parameterCHOP | Baca artjog_params custom params sebagai CHOP channels |
+| `lag1` | lagCHOP (0.05s) | Debounce agar tidak flood WS saat slider digeser cepat |
+| `ctrl_exec` | chopexecuteDAT | onValueChange → serialize JSON → broadcast ke semua browser client |
+| `start_exec` | executeDAT | onStart: jalankan HTTP server subprocess; onExit/PreSave: matikan |
+| `sim_browser` | webrenderTOP | Render Three.js sim di dalam TD di http://localhost:8080 |
+| `webBrowser` | containerCOMP (palette) | Web browser dengan support keyboard/touch/audio |
+
+**Bug yang ditemukan dan fix:** `project.store/fetch` tidak ada di TD API → harus pakai `op('/project1').store/fetch`.
+
+**Storage client list:** `op('/project1').store('ws_clients', [])` — aman antar Cook cycle, reset saat project ditutup.
+
+---
+
+### 19. Python Scripts Disimpan ke Repo
+
+Semua Python DAT dari TD disimpan sebagai file independen:
+
+```
+scripts/
+├── ws_server_callbacks.py    ← WebSocket event handlers
+├── chop_to_websocket.py      ← CHOP onValueChange → JSON → WS broadcast
+└── http_server_lifecycle.py  ← onStart/onExit/onProjectPreSave HTTP subprocess
+```
+
+---
+
+### Status Saat Ini
+- WebSocket client di browser ✓ — port 9980, standalone-safe
+- TD project `Lighting-Sim.toe` dengan full control network ✓
+- `artjog_params` custom params = control surface operator TD ✓
+- `sim_browser` / `webBrowser` render sim di dalam TD ✓
+- HTTP server auto-managed dari TD via subprocess ✓
+- Python scripts di `scripts/` untuk version control ✓
+- MCP (port 9981) aktif — Claude Code bisa query/modify TD network langsung ✓
